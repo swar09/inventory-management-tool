@@ -1,20 +1,17 @@
-use std::path::PathBuf;
-use std::ptr::read;
-use std::sync::Arc;
-
 use crate::middleware::get_jwt;
 use crate::middleware::get_pass_key;
 use crate::middleware::verify_passkey;
+use crate::types::ItemPayload;
 use crate::types::User;
 use crate::types::UserRole;
 use crate::types::Vendor;
 use crate::types::VendorHandlerResponse;
+use axum::extract::Path;
 use axum::extract::State;
 use axum::Json;
 use chrono::DateTime;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::pool;
 use sqlx::PgPool;
 use uuid::Uuid;
 // use sqlx::Pool;
@@ -161,12 +158,8 @@ pub async fn get_vendor(State(pool): State<PgPool>, Json(id): Json<Uuid>) -> Jso
         .await;
 
     match result {
-        Ok(vendor) => {
-            return Json(Some(vendor));
-        }
-        Err(e) => {
-            return Json(None);
-        }
+        Ok(vendor) => Json(Some(vendor)),
+        Err(_e) => Json(None),
     }
 }
 
@@ -184,12 +177,8 @@ pub async fn delete_vendor(
             .await;
 
     match result {
-        Ok(vendor) => {
-            return Json(Some(vendor));
-        }
-        Err(e) => {
-            return Json(None);
-        }
+        Ok(vendor) => Json(Some(vendor)),
+        Err(_e) => Json(None),
     }
 }
 
@@ -216,12 +205,51 @@ pub async fn put_vendor(
     .await;
 
     match result {
-        Ok(vendor) => {
-            return Json(Some(vendor));
-        }
-        Err(e) => {
-            return Json(None);
+        Ok(vendor) => Json(Some(vendor)),
+        Err(_e) => Json(None),
+    }
+}
+
+pub async fn get_vendor_by_id(
+    State(pool): State<PgPool>,
+    Path(vendor_id): Path<Uuid>,
+) -> Json<Option<Vendor>> {
+    let result = sqlx::query_as::<_, Vendor>("SELECT * FROM vendor WHERE id = $1")
+        .bind(vendor_id)
+        .fetch_one(&pool)
+        .await;
+
+    match result {
+        Ok(vendor) => Json(Some(vendor)),
+        Err(_e) => {
+            // error handling db error
+            println!("DB error");
+            Json(None)
         }
     }
 }
 
+pub async fn add_new_item(
+    State(pool): State<PgPool>,
+    Path(vendor_id): Path<Uuid>,
+    payload: Json<ItemPayload>,
+) -> Json<bool> {
+    let _result = sqlx::query("INSERT INTO item (vendor_id, sku, name, description, status, base_price, currency_code, catgeory_ids,  unit_of_measure, variant, has_variants, tags, attributes, image_urls ) 
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14); ")
+    .bind(vendor_id)
+    .bind(&payload.sku)
+    .bind(&payload.name)
+    .bind(&payload.description)
+    .bind(&payload.status)
+    .bind(payload.base_price)
+    .bind(&payload.currency_code)
+    .bind(&payload.catgeory_ids)
+    .bind(&payload.uom)
+    .bind(sqlx::types::Json(&payload.variants))
+    .bind(payload.has_variants)
+    .bind(&payload.tags)
+    .bind(sqlx::types::Json(&payload.attributes))
+    .bind(&payload.image_urls)
+    .execute(&pool).await;
+    Json(false)
+}

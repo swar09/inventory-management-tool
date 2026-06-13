@@ -1,3 +1,4 @@
+// #[axum::debug_handler]
 use std::time::Duration;
 
 use axum::{
@@ -9,7 +10,7 @@ use serde::Serialize;
 mod middleware;
 mod routes;
 mod types;
-use crate::routes::login_handler;
+use crate::routes::{get_vendor_by_id, login_handler};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 #[derive(Serialize)]
@@ -56,6 +57,7 @@ async fn main() {
         .route("/api/health", get(health_check))
         .route("/login", post(login_handler))
         .route("/signup", post(signup_handler))
+        .route("/vendor/{vendor_id}", get(get_vendor_by_id))
         .with_state(state.pool);
     /*
 
@@ -87,7 +89,9 @@ async fn main() {
     */
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0: 3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0: 3000")
+        .await
+        .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 

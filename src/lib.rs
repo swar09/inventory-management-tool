@@ -1,5 +1,5 @@
-pub mod types;
-pub mod routes;
-pub mod error;
 pub mod database;
+pub mod error;
 pub mod middleware;
+pub mod routes;
+pub mod types;

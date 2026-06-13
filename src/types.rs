@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-use chrono::Utc;
 use chrono::DateTime;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use std::collections::HashMap;
 use uuid::Uuid;
 
-
-#[derive(Deserialize)]
-#[derive(FromRow, Debug)]
+#[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct Vendor {
     pub id: Uuid,
     pub slug: Option<String>,
@@ -44,7 +42,6 @@ pub struct Item {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItemVariant {
@@ -118,17 +115,15 @@ pub struct ApiKey {
 
 #[derive(FromRow, Debug)]
 pub struct User {
-    pub id : Uuid, 
-    pub vendor_id : Uuid,
-    pub role : UserRole,
-    // pub email: 
-    pub passkey : String,
+    pub id: Uuid,
+    pub vendor_id: Uuid,
+    pub role: UserRole,
+    // pub email:
+    pub passkey: String,
 }
 
 #[derive(Serialize)]
-pub struct VendorHandlerResponse {
-    
-}
+pub struct VendorHandlerResponse {}
 
 #[derive(Deserialize)]
 pub enum Role {
@@ -165,4 +160,27 @@ pub enum UserRole {
     Read_Only_User,
     Service,
     Sys_Admin,
+}
+
+#[derive(Deserialize, Serialize, FromRow, Debug)]
+pub struct ItemPayload {
+    // pub id: Uuid,
+    // pub vendor_id: Uuid, // check weather i can estabilsh connection between vendor and item in database
+    pub sku: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: Status,
+    pub base_price: Option<i32>,
+    pub currency_code: Option<String>,
+    pub catgeory_ids: Option<Vec<Uuid>>,
+    pub units: u32,
+    pub variants: Option<Vec<ItemVariant>>,
+    pub stock: u32,
+    pub uom: Option<String>, // unit of measure
+    pub tags: Option<Vec<String>>,
+    pub attributes: Option<HashMap<String, String>>,
+    pub image_urls: Option<Vec<String>>,
+    pub has_variants: bool,
+    // pub created_at: DateTime<Utc>,
+    // pub updated_at: DateTime<Utc>,
 }
