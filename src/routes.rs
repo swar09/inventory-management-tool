@@ -7,7 +7,6 @@ use crate::types::Itemstatus;
 use crate::types::User;
 use crate::types::UserRole;
 use crate::types::Vendor;
-use crate::types::VendorHandlerResponse;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::Json;
@@ -149,9 +148,9 @@ pub async fn login_handler(
     }
 }
 
-pub async fn vendor_handler(_payload: Json<Vendor>) -> Json<VendorHandlerResponse> {
-    Json(VendorHandlerResponse {})
-}
+// pub async fn vendor_handler(_payload: Json<Vendor>) -> Json<VendorHandlerResponse> {
+//     Json(VendorHandlerResponse {})
+// }
 
 pub async fn get_vendor(State(pool): State<PgPool>, Json(id): Json<Uuid>) -> Json<Option<Vendor>> {
     let result = sqlx::query_as::<_, Vendor>("SELECT * from vendors WHERE id = $1")

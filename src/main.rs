@@ -1,16 +1,20 @@
-// #[axum::debug_handler]
 use std::time::Duration;
 
 use axum::{
-    routing::{get, post},
+    routing::{delete, get, post, put},
     Json, Router,
 };
-use inventory_management_tool::routes::{archive_item_by_id, signup_handler};
+use inventory_management_tool::routes::{
+    archive_item_by_id, get_skus_by_id, put_item_by_id, signup_handler,
+};
 use serde::Serialize;
 mod middleware;
 mod routes;
 mod types;
-use crate::routes::{get_item_by_id, get_items_by_id, get_vendor_by_id, login_handler};
+use crate::routes::{
+    add_new_item, delete_vendor, get_item_by_id, get_items_by_id, get_vendor, get_vendor_by_id,
+    login_handler, put_vendor, set_sku_by_id,
+};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 #[derive(Serialize)]
@@ -59,11 +63,21 @@ async fn main() {
         .route("/signup", post(signup_handler))
         .route("/vendor/{vendor_id}", get(get_vendor_by_id))
         .route("/vendor/{vendor_id}/item/{item_id}", get(get_item_by_id))
-        .route("/vendor/{vendor_id}/item/", get(get_items_by_id))
+        .route("/vendor/{vendor_id}/item", get(get_items_by_id))
+        .route("/vendor/{vendor_id}/sku", get(get_skus_by_id))
         .route(
-            "/vendor/{vendor_id}/item/{item_id}",
+            "/vendor/{vendor_id}/item/{item_id}/sku",
+            post(set_sku_by_id),
+        )
+        .route(
+            "/vendor/{vendor_id}/item/{item_id}/archive",
             post(archive_item_by_id),
         )
+        .route("/vendor/{vendor_id}/item/{item_id}", post(put_item_by_id))
+        .route("/vendor/{vendor}/item/new", post(add_new_item))
+        .route("/vendor/{vendor_id}", delete(delete_vendor))
+        .route("/vendor", get(get_vendor))
+        .route("/vendor/{vendor_id}", put(put_vendor))
         .with_state(state.pool);
     /*
 
@@ -77,7 +91,7 @@ async fn main() {
     */
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0: 3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
