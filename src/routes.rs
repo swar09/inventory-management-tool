@@ -3,6 +3,8 @@ use crate::middleware::get_pass_key;
 use crate::middleware::verify_jwt;
 use crate::middleware::verify_passkey;
 use crate::types::Claims;
+use crate::types::CsvRecordItem;
+use crate::types::CsvRecordVendor;
 use crate::types::Item;
 use crate::types::ItemPayload;
 use crate::types::Itemstatus;
@@ -455,4 +457,81 @@ pub async fn get_skus_by_id(
             Json(vec![(error,)])
         }
     }
+}
+
+pub async fn post_csv_vendors(
+    State(pool): State<PgPool>,
+    Json(payload): Json<Vec<CsvRecordVendor>>,
+) -> Json<bool> {
+    if let Some(record) = payload.into_iter().next() {
+        let result = sqlx::query(
+            "INSERT INTO vendor (slug , name, status, email, metadata, items)
+        VALUES ($1 ,$2 ,$3 ,$4 ,$5 ,$6 )",
+        )
+        .bind(record.slug)
+        .bind(record.name)
+        .bind(record.status)
+        .bind(record.email)
+        .bind(sqlx::types::Json(record.metadata))
+        .bind(sqlx::types::Json(record.items))
+        .execute(&pool)
+        .await;
+
+        match result {
+            Ok(query) => {
+                if query.rows_affected() == 0 {
+                    return Json(false);
+                } else {
+                    return Json(true);
+                }
+            }
+            Err(_e) => {
+                return Json(false);
+            }
+        }
+    }
+    Json(false)
+}
+pub async fn post_csv_items(
+    State(pool): State<PgPool>,
+    Json(payload): Json<Vec<CsvRecordItem>>,
+) -> Json<bool> {
+    if let Some(record) = payload.into_iter().next() {
+        let result = sqlx::query(
+            "INSERT INTO vendor (vendor_id , sku, name, description, status, base_price, currency_code, catgeory_ids, units, variants, stock, uom, tags, attributes, image_urls, has_variant)
+        VALUES ($1 ,$2 ,$3 ,$4 ,$5 ,$6, $7 ,$8 ,$9 ,$10 ,$11 ,$12 ,$13 ,$14 ,$15 ,$16)",
+        )
+        .bind(record.vendor_id)
+        .bind(record.sku)
+        .bind(record.name)
+        .bind(record.description)
+        .bind(record.status)
+        .bind(record.base_price)
+        .bind(record.currency_code)
+        .bind(record.catgeory_ids)
+        .bind(record.units)
+        .bind(record.variants)
+        .bind(record.stock)
+        .bind(record.uom)
+        .bind(record.tags)
+        .bind(sqlx::types::Json(record.attributes))
+        .bind(sqlx::types::Json(record.image_urls))
+        .bind(record.has_variants)
+        .execute(&pool)
+        .await;
+
+        match result {
+            Ok(query) => {
+                if query.rows_affected() == 0 {
+                    return Json(false);
+                } else {
+                    return Json(true);
+                }
+            }
+            Err(_e) => {
+                return Json(false);
+            }
+        }
+    }
+    Json(false)
 }

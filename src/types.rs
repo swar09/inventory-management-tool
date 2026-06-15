@@ -19,6 +19,20 @@ pub struct Vendor {
     #[sqlx(json)]
     pub items: Vec<Item>,
 }
+#[derive(Deserialize, Serialize, FromRow, Debug)]
+pub struct CsvRecordVendor {
+    // pub id: Uuid, //system genrated
+    pub slug: Option<String>,
+    pub name: String,
+    pub status: Status,
+    pub email: String,
+    #[sqlx(json)]
+    pub metadata: Option<HashMap<String, String>>,
+    // pub created_at: DateTime<Utc>, // system genrated
+    // pub updated_at: DateTime<Utc>, // system genrated
+    #[sqlx(json)]
+    pub items: Vec<Uuid>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Item {
@@ -43,6 +57,29 @@ pub struct Item {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CsvRecordItem {
+    // pub id: Uuid, // system genrated
+    pub vendor_id: Uuid, // check weather i can estabilsh connection between vendor and item in database
+    pub sku: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: Status,
+    pub base_price: Option<i32>,
+    pub currency_code: Option<String>,
+    pub catgeory_ids: Option<Vec<Uuid>>,
+    pub units: i32,
+    pub variants: Option<Vec<Uuid>>, // ItemVariant Uuid
+    pub stock: i32,
+    pub uom: Option<String>, // unit of measure
+    pub tags: Option<Vec<String>>,
+    #[sqlx(json)]
+    pub attributes: Option<HashMap<String, String>>,
+    pub image_urls: Option<Vec<String>>,
+    pub has_variants: bool,
+    // pub created_at: DateTime<Utc>,
+    // pub updated_at: DateTime<Utc>, //system genrated
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ItemVariant {
@@ -60,7 +97,35 @@ pub struct ItemVariant {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CsvRecordItemVariant {
+    pub id: Uuid,
+    pub item_id: Uuid,
+    pub vendor_id: Uuid,
+    pub sku: String,
+    pub name: String,
+    pub status: Status,
+    pub option_values: HashMap<String, String>,
+    pub base_price: i32,
+    pub attributes: HashMap<String, String>,
+    pub stock: i32,
+    pub image_urls: Option<Vec<String>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
 pub struct Catgeory {
+    pub id: Uuid,
+    pub vendor_id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub parent_id: Uuid,
+    pub description: String,
+    pub sort_order: i8,
+    pub attributes: HashMap<String, String>,
+    pub created_at: Utc,
+    pub updated_at: Utc,
+}
+pub struct CsvRecordCatgeory {
     pub id: Uuid,
     pub vendor_id: Uuid,
     pub name: String,

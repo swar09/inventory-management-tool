@@ -77,3 +77,7 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ,
     CONSTRAINT fk_vendor_user FOREIGN KEY (vendor_id) REFERENCES vendor(id)
 );
+
+
+-- setup  automatic queryies wch will map the uud of vendors , items and tem variants etc in relational way 
+-- acroess tables 
