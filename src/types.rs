@@ -46,6 +46,7 @@ pub struct Item {
     pub currency_code: Option<String>,
     pub catgeory_ids: Option<Vec<Uuid>>,
     pub units: i32,
+    #[sqlx(json)]
     pub variants: Option<Vec<Uuid>>, // ItemVariant Uuid
     pub stock: i32,
     pub uom: Option<String>, // unit of measure
@@ -80,6 +81,7 @@ pub struct CsvRecordItem {
     // pub created_at: DateTime<Utc>,
     // pub updated_at: DateTime<Utc>, //system genrated
 }
+// #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ItemVariant {
@@ -89,10 +91,13 @@ pub struct ItemVariant {
     pub sku: String,
     pub name: String,
     pub status: Status,
+    #[sqlx(json)]
     pub option_values: HashMap<String, String>,
     pub base_price: i32,
+    #[sqlx(json)]
     pub attributes: HashMap<String, String>,
     pub stock: i32,
+    #[sqlx(json)]
     pub image_urls: Option<Vec<String>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -171,7 +176,7 @@ pub struct ApiKey {
     pub name: String,
     pub key_prefix: String,
     pub key_hash: String,
-    pub role: Role,
+    // pub role: Role,
     pub status: ApiStatus,
     pub last_used_time: Utc,
     pub expires_at: Utc,

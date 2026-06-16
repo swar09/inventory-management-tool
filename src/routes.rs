@@ -1,3 +1,4 @@
+use crate::middleware::check_vendor_id;
 use crate::middleware::get_jwt;
 use crate::middleware::get_pass_key;
 use crate::middleware::verify_jwt;
@@ -7,6 +8,7 @@ use crate::types::CsvRecordItem;
 use crate::types::CsvRecordVendor;
 use crate::types::Item;
 use crate::types::ItemPayload;
+use crate::types::ItemVariant;
 use crate::types::Itemstatus;
 use crate::types::User;
 use crate::types::UserRole;
@@ -325,10 +327,12 @@ pub async fn get_items_by_id(
     {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let result = sqlx::query_as::<_, Item>("SELECT * FROM item WHERE vendor_id = $1")
-        .bind(vendor_id)
-        .fetch_all(&pool)
-        .await;
+    let result = sqlx::query_as::<_, Item>(
+        "SELECT * FROM item WHERE vendor_id = $1 AND item_status != 'archived'",
+    )
+    .bind(vendor_id)
+    .fetch_all(&pool)
+    .await;
     match result {
         Ok(item) => Ok(Json(Some(item))),
         Err(_e) => Err(StatusCode::UNAUTHORIZED),
@@ -421,7 +425,7 @@ pub async fn post_csv_vendors(
     if let Some(record) = payload.into_iter().next() {
         let result = sqlx::query(
             "INSERT INTO vendor (slug , name, status, email, metadata, items)
-        VALUES ($1 ,$2 ,$3 ,$4 ,$5 ,$6 )",
+            VALUES ($1 ,$2 ,$3 ,$4 ,$5 ,$6 )",
         )
         .bind(record.slug)
         .bind(record.name)
@@ -454,7 +458,7 @@ pub async fn post_csv_items(
     if let Some(record) = payload.into_iter().next() {
         let result = sqlx::query(
             "INSERT INTO vendor (vendor_id , sku, name, description, status, base_price, currency_code, catgeory_ids, units, variants, stock, uom, tags, attributes, image_urls, has_variant)
-        VALUES ($1 ,$2 ,$3 ,$4 ,$5 ,$6, $7 ,$8 ,$9 ,$10 ,$11 ,$12 ,$13 ,$14 ,$15 ,$16)",
+            VALUES ($1 ,$2 ,$3 ,$4 ,$5 ,$6, $7 ,$8 ,$9 ,$10 ,$11 ,$12 ,$13 ,$14 ,$15 ,$16)",
         )
         .bind(record.vendor_id)
         .bind(record.sku)
@@ -488,3 +492,105 @@ pub async fn post_csv_items(
     }
     Err(StatusCode::NOT_MODIFIED)
 }
+
+pub async fn get_variant_by_id(
+    State(pool): State<PgPool>,
+    Path((vendor_id, _item_id)): Path<(Uuid, Uuid)>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<Vec<ItemVariant>>, StatusCode> {
+    if claims.role < UserRole::Operator
+        && claims.vendor != vendor_id.to_string()
+        && claims.role != Sys_Admin
+    {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let result =
+        sqlx::query_scalar("SELECT variant FROM item WHERE vendor_id = $1 AND item_id = $2")
+            .bind("vendor_id")
+            .bind("item_id")
+            .fetch_one(&pool)
+            .await;
+    let mut uuids: Vec<Uuid> = Vec::new();
+    match result {
+        Ok(variant) => match variant {
+            None => return Err(StatusCode::NOT_FOUND),
+            Some(vec) => {
+                uuids = vec;
+            }
+        },
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+    let mut variants: Vec<ItemVariant> = Vec::new();
+    for id in uuids {
+        let result = sqlx::query_as::<_, ItemVariant>("SELECT * FROM item_variant WHERE id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await;
+        match result {
+            Ok(variant) => {
+                variants.push(variant);
+            }
+            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    }
+
+    Ok(Json(variants))
+}
+
+pub async fn put_variant_by_id(
+    State(pool): State<PgPool>,
+    Path((vendor_id, item_id, variant_id)): Path<(Uuid, Uuid, Uuid)>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ItemVariant>,
+) -> Result<Json<bool>, StatusCode> {
+    match claims.role {
+        UserRole::Read_Only_User => {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        UserRole::Admin => {}
+        _ => {
+            if !(check_vendor_id(vendor_id.to_string(), claims.vendor).await) {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
+        }
+    }
+
+    let result = sqlx::query("INSERT INTO item_variant (item_id,vendor_id,sku, name, option_values, base_price, attributes, stock, image_urls) VALUES ($2,$3,$4,$5,$6,$7,$8,$9) WHERE id = $1")
+        .bind(variant_id)
+        .bind(item_id)
+        .bind(vendor_id)
+        .bind(payload.sku)
+        .bind(payload.name)
+        .bind(payload.status)
+        .bind(sqlx::types::Json(payload.option_values))
+        .bind(payload.base_price)
+        .bind(sqlx::types::Json(payload.attributes))
+        .bind(payload.stock)
+        .bind(sqlx::types::Json(payload.image_urls))
+        .execute(&pool)
+        .await;
+
+    match result {
+        Ok(query) => {
+            if query.rows_affected() == 0 {
+                Err(StatusCode::NOT_MODIFIED)
+            } else {
+                Ok(Json(true))
+            }
+        }
+        Err(_e) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+pub async fn get_cats_by_id() {}
+pub async fn get_cat_by_id() {}
+pub async fn put_cat_by_id() {}
+pub async fn delete_cat_by_id() {}
+
+pub async fn get_stock_record_by_id() {}
+pub async fn update_stock_by_id() {}
+pub async fn delte_stock_by_id() {}
+
+pub async fn get_api_key() {}
+pub async fn put_api_key() {}

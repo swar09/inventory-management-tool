@@ -111,3 +111,10 @@ pub async fn auth_middleware(mut req: Request, next: Next) -> Result<Response, S
 
     Ok(next.run(req).await)
 }
+
+pub async fn check_vendor_id(vendor_id: String, claims_id: String) -> bool {
+    vendor_id == claims_id
+}
+
+pub async fn api_key_login() {}
+pub async fn verify_api_key() {}
