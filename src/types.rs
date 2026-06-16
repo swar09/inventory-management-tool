@@ -118,17 +118,19 @@ pub struct CsvRecordItemVariant {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
-pub struct Catgeory {
+#[derive(Deserialize, Serialize, FromRow, Debug)]
+pub struct Category {
     pub id: Uuid,
     pub vendor_id: Uuid,
     pub name: String,
     pub slug: String,
     pub parent_id: Uuid,
     pub description: String,
-    pub sort_order: i8,
+    pub sort_order: i32,
+    #[sqlx(json)]
     pub attributes: HashMap<String, String>,
-    pub created_at: Utc,
-    pub updated_at: Utc,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 pub struct CsvRecordCatgeory {
     pub id: Uuid,

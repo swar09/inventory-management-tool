@@ -1,8 +1,10 @@
 use crate::middleware::check_vendor_id;
+use crate::middleware::get_cat_by_cat_id;
 use crate::middleware::get_jwt;
 use crate::middleware::get_pass_key;
 use crate::middleware::verify_jwt;
 use crate::middleware::verify_passkey;
+use crate::types::Category;
 use crate::types::Claims;
 use crate::types::CsvRecordItem;
 use crate::types::CsvRecordVendor;
@@ -22,6 +24,7 @@ use axum::Json;
 use chrono::DateTime;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+
 use sqlx::PgPool;
 use uuid::Uuid;
 // use sqlx::Pool;
@@ -557,19 +560,19 @@ pub async fn put_variant_by_id(
     }
 
     let result = sqlx::query("INSERT INTO item_variant (item_id,vendor_id,sku, name, option_values, base_price, attributes, stock, image_urls) VALUES ($2,$3,$4,$5,$6,$7,$8,$9) WHERE id = $1")
-        .bind(variant_id)
-        .bind(item_id)
-        .bind(vendor_id)
-        .bind(payload.sku)
-        .bind(payload.name)
-        .bind(payload.status)
-        .bind(sqlx::types::Json(payload.option_values))
-        .bind(payload.base_price)
-        .bind(sqlx::types::Json(payload.attributes))
-        .bind(payload.stock)
-        .bind(sqlx::types::Json(payload.image_urls))
-        .execute(&pool)
-        .await;
+    .bind(variant_id)
+    .bind(item_id)
+    .bind(vendor_id)
+    .bind(payload.sku)
+    .bind(payload.name)
+    .bind(payload.status)
+    .bind(sqlx::types::Json(payload.option_values))
+    .bind(payload.base_price)
+    .bind(sqlx::types::Json(payload.attributes))
+    .bind(payload.stock)
+    .bind(sqlx::types::Json(payload.image_urls))
+    .execute(&pool)
+    .await;
 
     match result {
         Ok(query) => {
@@ -583,8 +586,61 @@ pub async fn put_variant_by_id(
     }
 }
 
-pub async fn get_cats_by_id() {}
-pub async fn get_cat_by_id() {}
+pub async fn get_cats_by_id(
+    State(pool): State<PgPool>,
+    Path((vendor_id, item_id)): Path<(Uuid, Uuid)>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<Vec<Category>>, StatusCode> {
+    if claims.role < UserRole::Read_Only_User {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let result = sqlx::query_scalar::<_, Vec<Uuid>>(
+        "SELECT catgeory_ids FROM item WHERE vendor_id = $1 AND item_id = $2",
+    )
+    .bind(vendor_id)
+    .bind(item_id)
+    .fetch_one(&pool)
+    .await;
+    let mut cat_ids = Vec::new();
+    match result {
+        Ok(vec) => {
+            cat_ids = vec;
+        }
+        Err(_e) => {
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+    let mut cats = Vec::new();
+    for id in cat_ids {
+        match get_cat_by_cat_id(id, State(pool.clone())).await {
+            Some(cat) => {
+                cats.push(cat);
+            }
+            None => {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+    }
+
+    Ok(Json(cats))
+}
+
+pub async fn get_cat_by_id(
+    State(pool): State<PgPool>,
+    Json(id): Json<Uuid>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<Category>, StatusCode> {
+    if claims.role < UserRole::Read_Only_User {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    match get_cat_by_cat_id(id, State(pool.clone())).await {
+        Some(c) => Ok(Json(c)),
+        _ => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 pub async fn put_cat_by_id() {}
 pub async fn delete_cat_by_id() {}
 

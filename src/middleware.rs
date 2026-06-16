@@ -1,14 +1,20 @@
-use crate::types::{Claims, UserRole};
+use crate::types::{Category, Claims, UserRole};
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use axum::{extract::Request, http::StatusCode, middleware::Next, response::Response};
+use axum::{
+    extract::{Request, State},
+    http::StatusCode,
+    middleware::Next,
+    response::Response,
+};
 use jsonwebtoken::encode;
 use jsonwebtoken::errors::Error;
 use jsonwebtoken::*;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use rand_core::OsRng;
+use sqlx::PgPool;
 use uuid::Uuid;
 
 pub struct testing {}
@@ -118,3 +124,12 @@ pub async fn check_vendor_id(vendor_id: String, claims_id: String) -> bool {
 
 pub async fn api_key_login() {}
 pub async fn verify_api_key() {}
+
+pub async fn get_cat_by_cat_id(id: Uuid, State(pool): State<PgPool>) -> Option<Category> {
+    let result = sqlx::query_as("SELECT * FROM category WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await;
+
+    result.ok()
+}
